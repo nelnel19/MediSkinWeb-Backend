@@ -2,13 +2,12 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-
 import authRoutes from "./routes/auth.js";
 import chatRoutes from "./routes/chat.js";
 import historyRoutes from "./routes/history.js";
 import faceRoutes from "./routes/face.js";
 import uploadRoutes from "./routes/upload.js";
-
+import skinHistoryRoutes from "./routes/skinHistory.js";
 dotenv.config();
 const app = express();
 
@@ -31,6 +30,7 @@ app.use("/api", chatRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/face", faceRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/skin-history", skinHistoryRoutes);
 
 // ✅ Root endpoint
 app.get("/", (req, res) => {
