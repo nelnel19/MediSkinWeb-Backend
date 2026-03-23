@@ -7,7 +7,7 @@ import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
-// REGISTER (existing code remains the same)
+// REGISTER
 router.post("/register", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, password, age, birthday, gender } = req.body;
@@ -71,7 +71,7 @@ router.post("/register", upload.single('profileImage'), async (req, res) => {
   }
 });
 
-// LOGIN (existing code remains the same)
+// LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -102,7 +102,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// UPDATE PROFILE (existing code remains the same)
+// UPDATE PROFILE
 router.put("/update/:id", upload.single('profileImage'), async (req, res) => {
   try {
     const { name, email, password, age, birthday, gender } = req.body;
@@ -154,7 +154,7 @@ router.put("/update/:id", upload.single('profileImage'), async (req, res) => {
   }
 });
 
-// GET USER PROFILE (existing code remains the same)
+// GET USER PROFILE
 router.get("/profile/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -166,7 +166,7 @@ router.get("/profile/:id", async (req, res) => {
   }
 });
 
-// GET ALL USERS (existing code remains the same)
+// GET ALL USERS
 router.get("/all", async (req, res) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
@@ -180,15 +180,13 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// NEW ENDPOINT: GET WEEKLY USER STATISTICS - FIXED VERSION
+// GET WEEKLY USER STATISTICS
 router.get("/weekly-stats", async (req, res) => {
   try {
     console.log("📊 WEEKLY STATS API CALLED");
     
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Start of today
-    
-    // Get start of 7 days ago (midnight)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - 7);
     
@@ -197,7 +195,6 @@ router.get("/weekly-stats", async (req, res) => {
     console.log("End (today start):", today.toString());
     console.log("Now (current time):", now.toString());
     
-    // Get ALL users to see what we have
     const allUsers = await User.find({}, 'createdAt name email').sort({ createdAt: 1 });
     console.log(`\n📈 TOTAL USERS IN SYSTEM: ${allUsers.length}`);
     allUsers.forEach((user, index) => {
@@ -206,11 +203,10 @@ router.get("/weekly-stats", async (req, res) => {
       console.log(`User ${index + 1}: ${user.name || 'No name'} - ${user.email} - Created: ${localDate}`);
     });
     
-    // Get users created in the last 7 days (INCLUSIVE of start date)
     const recentUsers = await User.find({
       createdAt: { 
         $gte: startOfWeek,
-        $lte: now // Use current time, not start of today
+        $lte: now
       }
     }, 'createdAt name').sort({ createdAt: 1 });
     
@@ -221,10 +217,8 @@ router.get("/weekly-stats", async (req, res) => {
       console.log(`Recent User ${index + 1}: ${user.name || 'No name'} - ${localDate}`);
     });
     
-    // SIMPLIFIED: Get daily counts using date comparison
     const dailyStats = [];
     
-    // Create array for last 7 days
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
@@ -232,7 +226,6 @@ router.get("/weekly-stats", async (req, res) => {
       const nextDay = new Date(date);
       nextDay.setDate(date.getDate() + 1);
       
-      // Count users for this specific day
       const dayUsers = recentUsers.filter(user => {
         const userDate = new Date(user.createdAt);
         return userDate >= date && userDate < nextDay;
@@ -250,13 +243,11 @@ router.get("/weekly-stats", async (req, res) => {
       console.log(`${stat.dateString}: ${stat.count} users`);
     });
     
-    // Get users before the week
     const usersBeforeWeek = await User.countDocuments({
       createdAt: { $lt: startOfWeek }
     });
     console.log(`\n👥 USERS BEFORE WEEK START: ${usersBeforeWeek}`);
     
-    // Create data for last 7 days for frontend
     const dailyData = [];
     let cumulativeUsers = usersBeforeWeek;
     
@@ -312,4 +303,28 @@ router.get("/weekly-stats", async (req, res) => {
     });
   }
 });
+
+// DELETE USER (new endpoint)
+router.delete("/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete profile image from Cloudinary if exists
+    if (user.profileImage && user.profileImage.public_id) {
+      await cloudinary.uploader.destroy(user.profileImage.public_id);
+    }
+
+    // Delete user from database
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;
