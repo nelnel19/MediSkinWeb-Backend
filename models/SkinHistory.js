@@ -15,7 +15,7 @@ const skinHistorySchema = new mongoose.Schema({
     }
   },
   created_at: { type: Date, default: Date.now }
-}, { collection: 'skin_history' }); // matches your existing collection
+}, { collection: 'skin_history' });
 
 const SkinHistory = mongoose.model("SkinHistory", skinHistorySchema);
 export default SkinHistory;
